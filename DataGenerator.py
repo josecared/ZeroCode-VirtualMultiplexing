@@ -196,11 +196,7 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
         patch = channel_stacks[c][rl, yax[0]:yax[1],xax[0]:xax[1]]
         if normalization == "ac":
             # Normalizing the patch using the percentile of the current channel "c"
-            normalized_patch = (patch/percentiles[c])*255         
-
-        if normalization == "od":
-            # Normalizing the patch using the highest percentile (open detector channel percentile)
-            normalized_patch = (patch/percentiles[2])*255     
+            normalized_patch = (patch/percentiles[c])*255           
 
         # Clipping the values, anything higher than 255 is set to 255
         normalized_patch[normalized_patch> 255] = 255
@@ -210,7 +206,7 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     
     #Empty 3 channel RGB array for source image
     source_image = np.zeros((patchsize, patchsize,3))
-    if mode == "real":
+    if mode == "open_detector":
         #Introducing the Real patch in each channel of the source image (RGB) # dejar aqui solo el canal 3
         source_image[:,:,0] = channel_normalized_patches_list[0].astype(np.uint8)
         source_image[:,:,1] = channel_normalized_patches_list[0].astype(np.uint8)
