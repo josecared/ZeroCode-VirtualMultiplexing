@@ -1,8 +1,8 @@
 """
-Modified on Mon april 3 2023
+Modified on Thu april 18 2023
 
 @modified version: Ana Ballesteros
-@original author: Gustavo Bremo
+@author: Gustavo Bremo
 
 Functions: 
 Reads in an .czi file and generates datasets according to the parameter provided
@@ -105,7 +105,7 @@ def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode
         synthetic_patch = (channel_normalized_patches_list[0]+channel_normalized_patches_list[1])/2
         synthetic_patch = synthetic_patch.astype(np.uint8)
 
-        #Introducing the Synthetic patch in each channel of the source image (RGB)
+        #Introducing the Synthetic patch in each channel of the source image (RGB) # Dejar aqui solo el canal 3 
         source_image[:,:,0] = synthetic_patch.astype(np.uint8)
         source_image[:,:,1] = synthetic_patch.astype(np.uint8)
         source_image[:,:,2] = synthetic_patch.astype(np.uint8)
@@ -115,13 +115,13 @@ def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode
         synthetic_patch = cv2.addWeighted(channel_normalized_patches_list[0], alpha2, channel_normalized_patches_list[1],alpha, 0)
         synthetic_patch = synthetic_patch.astype(np.uint8)
 
-        #Introducing the Synthetic patch in each channel of the source image (RGB) 
+        #Introducing the Synthetic patch in each channel of the source image (RGB) # dejar aqui el canal 3
         source_image[:,:,0] = synthetic_patch.astype(np.uint8)
         source_image[:,:,1] = synthetic_patch.astype(np.uint8)
         source_image[:,:,2] = synthetic_patch.astype(np.uint8)
 
-    elif mode == "open_detector":
-        #Introducing the Real patch in each channel of the source image (RGB) 
+    elif mode == "real":
+        #Introducing the Real patch in each channel of the source image (RGB) # dejar aqui solo el canal 3
         source_image[:,:,0] = channel_normalized_patches_list[2].astype(np.uint8)
         source_image[:,:,1] = channel_normalized_patches_list[2].astype(np.uint8)
         source_image[:,:,2] = channel_normalized_patches_list[2].astype(np.uint8)
@@ -149,8 +149,9 @@ def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode
 
 #FOR MAKING PREDICTIONS
 #Function extracts patch, normalizes it based on percentile value of each channel, and creates syntheic data, returning concatenated AB images representing the source and target image.
-def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,normalization,Brightness):
-    
+
+def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,normalization,Brightness,individual_image):
+    individual_image = int(individual_image)
     #Generate brightness range list for data augmentation
     #Hard coded the range of brightness. a value of 1 the yields no change. Lower than 1, image gets darger. Higher than 1, image gets brighter.
     # Lower bound is 0.5 and upper bound is 3.
@@ -167,19 +168,23 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     if alpha:
         alpha2 = round(1-alpha,2)
 
-
+    
     #----------****GETTING COORDINATES FOR PATCH EXTRACTION****----------
     #get random ij position point in the tile image. 
     #uby "upper bound y" and ubx "upper bound x" are limits of the y and x axis in the image in order to avoid slecting an area where a patch falls outside of the image range.
+    i_idx = 0
+    j_idx = 0
+    '''
     i_idx = random.randint(0,uby)
     j_idx = random.randint(0,ubx)
+    '''
     #Each list contains two indices selecting a range in the corresponding axis starting from the "i or j"th point up to the lenght of a patch size i.e 512
     yax = [i_idx, (i_idx+patchsize)]
     xax = [j_idx, (j_idx+patchsize)]
 
     #Generates a random number representing a random selection of a layer (all layers are considered here)
-    rl = random.randint(0,l-1)
-
+    #rl = random.randint(0,l-1)
+    rl = individual_image
     
     #----------****EXTRACTING PATCHES****----------
     #List containing normalized patch from all three channels
@@ -189,10 +194,13 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     for c in range(channels):
         #extracting the patch from channel "c" from the layer "rl" of the stack 
         patch = channel_stacks[c][rl, yax[0]:yax[1],xax[0]:xax[1]]
-        
         if normalization == "ac":
             # Normalizing the patch using the percentile of the current channel "c"
-            normalized_patch = (patch/percentiles[c])*255             
+            normalized_patch = (patch/percentiles[c])*255         
+
+        if normalization == "od":
+            # Normalizing the patch using the highest percentile (open detector channel percentile)
+            normalized_patch = (patch/percentiles[2])*255     
 
         # Clipping the values, anything higher than 255 is set to 255
         normalized_patch[normalized_patch> 255] = 255
@@ -202,13 +210,12 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     
     #Empty 3 channel RGB array for source image
     source_image = np.zeros((patchsize, patchsize,3))
-
-    if mode == "open_detector":
-        #Introducing the Real patch in each channel of the source image (RGB)
+    if mode == "real":
+        #Introducing the Real patch in each channel of the source image (RGB) # dejar aqui solo el canal 3
         source_image[:,:,0] = channel_normalized_patches_list[0].astype(np.uint8)
         source_image[:,:,1] = channel_normalized_patches_list[0].astype(np.uint8)
         source_image[:,:,2] = channel_normalized_patches_list[0].astype(np.uint8)
-
+    
     if Brightness:
             #Enhancing brightness of source image 
         if random.randint(0,100) < int(Brightness):
@@ -219,6 +226,7 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     image_AB = source_image
     #Return the AB image
     return(image_AB)
+
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #MAIN function automating the patch extraction process
@@ -227,18 +235,16 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
     u_layer = int(u_layer)
     percentile = float(percentile)
     patchsize = int(patchsize)
-    datasize = int(datasize)
     #Number of channels from the stack as integers 
     channels = int(channels)
     if role == "train_test": 
         ch1 = int(ch1)
         ch2 = int(ch2)
+        datasize = int(datasize)
     ch3 = int(ch3)
     if alpha:
         alpha = float(alpha)
-
-
-
+    
     #Collects all planes from all 3 channels
     channel_stacks = []
     #List containing the calculated percentile value from each channel from the stack 
@@ -339,7 +345,6 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
             matplotlib.image.imsave(datafoldername+"/val/"+str(t)+'.png', image_AB.astype(np.uint8))
     
     elif role == "predict": 
-
         #LOADING THE CHANNEL DATA FROM THE 3D STACK AND CALCULATING PERCENTILE FOR EACH CHANNEL
         selected_channels = [ch3]
         #For each channel in the 3Dstack
@@ -366,7 +371,7 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
 
             #Append percentile values to list
             percentiles.append(p_val)
-        
+            
         #AUTOMATING PATCH EXTRACTION
         #Get dimensions that will be used to extract patches
         dimensions = channel_stacks[0].shape 
@@ -380,10 +385,7 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
         #Upperbound for x and y (avoid taking patch beyond frame size)
         ubx = x-patchsize
         uby = y-patchsize
-
-        #Defining proportions of the dataset
-        t_data = int(datasize)
-    
+        
         #----------****CREATING FOLDERS****----------
         if alpha:
             wb = str(alpha)+"_"+str(round(1-alpha,2))
@@ -402,13 +404,12 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
         #----------********----------
         #Extracting patches for training testing and validation
 
-        #Generating training set
-        for t in range(t_data):    
-
+        #Generating the images set
+        for i in range(l):    
             #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-            image_AB = get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+            image_AB = get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness,i)
             #Saving the AB patch
-            matplotlib.image.imsave(datafoldername+"/images/"+str(t)+'.png', image_AB.astype(np.uint8))
+            matplotlib.image.imsave(datafoldername+"/images/"+str(i)+'.png', image_AB.astype(np.uint8))
 
 if __name__ == '__main__':
     #Commandline arguments
@@ -425,7 +426,7 @@ if __name__ == '__main__':
     parser.add_argument("--TopLayer", help = "Enter top layer number")
     parser.add_argument("--Biosample", help = "Enter biological sample name")
     parser.add_argument("--DatasetSize", help = "Enter size of training data to generate")
-    parser.add_argument("--DataMode", help = "Enter data type: synthethic | open_dector | weighted | For weighted blending alpha must be set")
+    parser.add_argument("--DataMode", help = "Enter data type: synthethic | real | weighted | For weighted blending alpha must be set")
     parser.add_argument("--Alpha", help = "Enter ch1 alpha value for blending | ch2 alpha is automaticall calculated 1-alpha")
     parser.add_argument("--Normalization", help = "Enter normalization option for percentile value| od = Open detector percentile, ac = All channels percentiles")
     parser.add_argument("--Brightness", help = "Enter percentage of brighness augmented images in the dataset| enter as integer e.g. 50 -> means 50%")
@@ -435,5 +436,4 @@ if __name__ == '__main__':
 
                       
     main_DataGenerator(args.Filepath,args.Role,args.Percentile,args.PatchSize,args.Channels,args.Channel1,args.Channel2,args.Channel3,args.BottomLayer,args.TopLayer,args.Biosample,args.DatasetSize,args.DataMode,args.Alpha,args.Normalization,args.Brightness)
-
-
+    
