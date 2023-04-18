@@ -120,7 +120,7 @@ def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode
         source_image[:,:,1] = synthetic_patch.astype(np.uint8)
         source_image[:,:,2] = synthetic_patch.astype(np.uint8)
 
-    elif mode == "real":
+    elif mode == "open_detector":
         #Introducing the Real patch in each channel of the source image (RGB) # dejar aqui solo el canal 3
         source_image[:,:,0] = channel_normalized_patches_list[2].astype(np.uint8)
         source_image[:,:,1] = channel_normalized_patches_list[2].astype(np.uint8)
@@ -172,12 +172,10 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     #----------****GETTING COORDINATES FOR PATCH EXTRACTION****----------
     #get random ij position point in the tile image. 
     #uby "upper bound y" and ubx "upper bound x" are limits of the y and x axis in the image in order to avoid slecting an area where a patch falls outside of the image range.
+    
     i_idx = 0
     j_idx = 0
-    '''
-    i_idx = random.randint(0,uby)
-    j_idx = random.randint(0,ubx)
-    '''
+
     #Each list contains two indices selecting a range in the corresponding axis starting from the "i or j"th point up to the lenght of a patch size i.e 512
     yax = [i_idx, (i_idx+patchsize)]
     xax = [j_idx, (j_idx+patchsize)]
@@ -196,7 +194,7 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
         patch = channel_stacks[c][rl, yax[0]:yax[1],xax[0]:xax[1]]
         if normalization == "ac":
             # Normalizing the patch using the percentile of the current channel "c"
-            normalized_patch = (patch/percentiles[c])*255           
+            normalized_patch = (patch/percentiles[c])*255            
 
         # Clipping the values, anything higher than 255 is set to 255
         normalized_patch[normalized_patch> 255] = 255
@@ -385,12 +383,12 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
         #----------****CREATING FOLDERS****----------
         if alpha:
             wb = str(alpha)+"_"+str(round(1-alpha,2))
-            datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_"+wb+"_patches"
+            datafoldername = biosample+"_"+Norm+"_"+mode+"_"+wb+"_patches"
 
         elif Brightness:
-            datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_br"+Brightness+"%"+"_patches"
+            datafoldername = biosample+"_"+Norm+"_"+mode+"_br"+Brightness+"%"+"_patches"
         else:
-            datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_patches"
+            datafoldername = biosample+"_"+Norm+"_"+mode+"_patches"
 
 
         os.mkdir(datafoldername)
@@ -422,7 +420,7 @@ if __name__ == '__main__':
     parser.add_argument("--TopLayer", help = "Enter top layer number")
     parser.add_argument("--Biosample", help = "Enter biological sample name")
     parser.add_argument("--DatasetSize", help = "Enter size of training data to generate")
-    parser.add_argument("--DataMode", help = "Enter data type: synthethic | real | weighted | For weighted blending alpha must be set")
+    parser.add_argument("--DataMode", help = "Enter data type: synthethic | open_detector | weighted | For weighted blending alpha must be set")
     parser.add_argument("--Alpha", help = "Enter ch1 alpha value for blending | ch2 alpha is automaticall calculated 1-alpha")
     parser.add_argument("--Normalization", help = "Enter normalization option for percentile value| od = Open detector percentile, ac = All channels percentiles")
     parser.add_argument("--Brightness", help = "Enter percentage of brighness augmented images in the dataset| enter as integer e.g. 50 -> means 50%")
@@ -432,4 +430,4 @@ if __name__ == '__main__':
 
                       
     main_DataGenerator(args.Filepath,args.Role,args.Percentile,args.PatchSize,args.Channels,args.Channel1,args.Channel2,args.Channel3,args.BottomLayer,args.TopLayer,args.Biosample,args.DatasetSize,args.DataMode,args.Alpha,args.Normalization,args.Brightness)
-    
+
