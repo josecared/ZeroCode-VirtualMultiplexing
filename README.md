@@ -21,6 +21,8 @@ In the tool, for generating data from a CZI file is used the [DataGenerator.py](
 ZeroCostDL4Mic-VirtualMultiplexing notebook can be directly opened from GitHub into Colab by clicking on the link. It is mandatory for use it to create a local copy to your Google Drive. Once you have a copy of it follow the intructions present on the notebook. 
 It is necesary to use this tool to have a Google Drive account for having a copy of the notebook as well as for uploading the files that you are going to use. 
 
+Access here to the tool: [ZeroCostDL4Mic-VirtualMultiplexing](https://colab.research.google.com/github/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/ZC_VirtualMultiplexing.ipynb)
+
 ### User general workflow
 
 Once you have copied the notebook in your Google Drive account, you can follow the general pipeline implemented shown below:
