@@ -12,7 +12,7 @@ It contains:
 
 ZeroCostDL4Mic-VirtualMultiplexing is a tool for generate and use deep learning models for signal unmixing in fluorescent microscopy imaging. It is set in a user friendly interface so anyone can use it, for that it is implemented in [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb). 
 
-In the tool, for generating data from a CZI file is used the [DataGenerator.py]([https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/DataGenerator.py](https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Tools/DataGenerator.py)), and the Deep Learning approach used for virtual multiplexing is based on [pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix). 
+In the tool, for generating data from a CZI file is used the [DataGenerator.py](https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Tools/DataGenerator.py), and the Deep Learning approach used for virtual multiplexing is based on [pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix). 
 
 <img src="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Images/Data_workflow.jpg" width="650" height="400">
 
