@@ -58,9 +58,20 @@ In this model the mixed signal comes from a synthetic approach in which the mixe
 In this model the mixed signal comes from a weighted approach in which the mixed signal is generated computationally by the combination between the signal of channel 1 (CDH1), with a contribution of 40% and channel 2 (KI67), with a contribution of 60%. 
 
 * [Data generated to train the model](https://drive.google.com/drive/folders/1CFPFkWV-5G1a8ioV-3Iud9YSRfyATUvD?usp=sharing).
-* [Versions of the trained model and test results (https://drive.google.com/drive/folders/1MOidHNvIyCH6KySGfsI5xV0sfrWQc75L?usp=sharing).
+* [Versions of the trained model and test results](https://drive.google.com/drive/folders/1MOidHNvIyCH6KySGfsI5xV0sfrWQc75L?usp=sharing).
 
 ## Predictions on real data
+
+The trained models have been used for virtual multiplexing in a real dataset which contains mixed signal of CDH1 and KI67 markers. 
+
+* [Data generated from the CZI for predictions](https://drive.google.com/drive/folders/1U8T5IgQB7DCYQbXamvGtSySrq_zRPePD?usp=sharing).
+* [Virtual mutliplexing results using open detector model](https://drive.google.com/drive/folders/1-tjP8_GcefnkSGzoodZ3IXS4Q5Y6LLYp?usp=sharing). 
+* [Virtual multiplexing results using synthetic model](https://drive.google.com/drive/folders/1LX2B9Tv8GXDpWxZOlpidj9TBp-fH5pcU?usp=sharing).
+* [Virtual multiplexing results using weighted blended model](https://drive.google.com/drive/folders/1-6-26qfm-wNU6b_q2JQvuGiTTtJSe_nJ?usp=sharing).
+
+## Remarks
+
+The datasets, models and output generated are not incluided in this repository since they too large for GitHub, to access them they are added as links to Google Drive. 
 
 
 
