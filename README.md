@@ -14,15 +14,19 @@ ZeroCostDL4Mic-VirtualMultiplexing is a tool for generate and use deep learning 
 
 For the Deep Learning approach used for virtual multiplexing embebed in ZeroCostDL4Mic-VirtualMultiplexing is based on [pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix). 
 
-<img src="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/assets/114954154/11cfaea4-a973-4f22-9088-83839e410c1e" width="600" height="400">
+<img src="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Images/Data_workflow.jpg" width="650" height="400">
 
-## How to get ZeroCostDL4Mic notebook?
+## How to use ZeroCostDL4Mic notebook?
 
 ZeroCostDL4Mic-VirtualMultiplexing notebook can be directly opened from GitHub into Colab by clicking on the link. It is mandatory for use it to create a local copy to your Google Drive. Once you have a copy of it follow the intructions present on the notebook. 
 It is necesary to use this tool to have a Google Drive account for having a copy of the notebook as well as for uploading the files that you are going to use. 
 
 ### User general workflow
 
-<img src ="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/assets/114954154/3b746acd-e29d-4273-b68b-17de88b5161c" width="600" height="400">
+<img src ="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Images/User_workflow.jpg" width="650" height="400">
+
+### What steps do you need to follow in the notebook?
+
+<img src ="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Images/User_steps.jpg" width="<550" height="650">
 
 
