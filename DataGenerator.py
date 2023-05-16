@@ -1,8 +1,7 @@
 """
 Modified on Thu april 18 2023
 
-@modified version: Ana Ballesteros
-@author: Gustavo Bremo
+@author: Ana Ballesteros
 
 Functions: 
 Reads in an .czi file and generates datasets according to the parameter provided
