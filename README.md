@@ -35,4 +35,36 @@ If you don't know which steps to follow in the noebook, answer the questions pre
 
 <img src ="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Images/User_steps.jpg" width="<550" height="650">
 
+## Models
+
+There were trained 3 different pix2pix models for virtual multiplexing with the same hyperparameter configuration and the same CZI file. They differ on the approach followed for generate the mixed signal data from the CZI file. 
+
+### Model 1
+
+In this model the mixed signal data comes from the third channel of the CZI file, which is an open detector channel that captures signals of channel number 1 (CDH1) and number 2 (KI67). 
+
+* [Data generated to train the model](https://drive.google.com/drive/folders/1VEqE5jROh1UNL1dB3qM4potkI_a9uUs4?usp=sharing). 
+* [Versions of the trained model and test results](https://drive.google.com/drive/folders/1PCXJfkxZPZEYHgfJfvdU5odojpx7KAl_?usp=sharing).
+
+### Model 2
+
+In this model the mixed signal comes from a synthetic approach in which the mixed signal is generated computationally by the aqual proportional combination between the signal of channel 1 (CDH1) and channel 2 (KI67). 
+
+* [Data generated to train the model](https://drive.google.com/drive/folders/1PCXJfkxZPZEYHgfJfvdU5odojpx7KAl_?usp=sharing).
+* [Versions of the trained model and test results](https://drive.google.com/drive/folders/1ziPplvnKBGzIQrLKoMXAEb-bqRYj6GWF?usp=sharing).
+
+### Model 3
+
+In this model the mixed signal comes from a weighted approach in which the mixed signal is generated computationally by the combination between the signal of channel 1 (CDH1), with a contribution of 40% and channel 2 (KI67), with a contribution of 60%. 
+
+* [Data generated to train the model](https://drive.google.com/drive/folders/1CFPFkWV-5G1a8ioV-3Iud9YSRfyATUvD?usp=sharing).
+* [Versions of the trained model and test results (https://drive.google.com/drive/folders/1MOidHNvIyCH6KySGfsI5xV0sfrWQc75L?usp=sharing).
+
+## Predictions on real data
+
+
+
+
+
+
 
