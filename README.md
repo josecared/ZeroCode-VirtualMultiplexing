@@ -35,6 +35,10 @@ If you don't know which steps to follow in the noebook, answer the questions pre
 
 <img src ="https://github.com/akabago/ZeroCostDL4Mic-VirtualMultiplexing/blob/main/Images/User_steps.jpg" width="<550" height="650">
 
+### Want to see a short demonstration?
+
+[Click here](https://drive.google.com/file/d/1Q8nRAze6feX3pJJ5mAbd6bIvEIgml1H2/view?usp=sharing) to access to a short video demonstration of the tool. 
+
 ## Models
 
 There were trained 3 different pix2pix models for virtual multiplexing with the same hyperparameter configuration and the same CZI file. They differ on the approach followed for generate the mixed signal data from the CZI file. 
