@@ -37,7 +37,7 @@ If you don't know which steps to follow in the noebook, answer the questions pre
 
 ### Want to see a short demonstration?
 
-[Click here](https://youtu.be/ccyvM6zGW1A) to access to a short video demonstration of the tool. 
+[Click here](https://youtu.be/7jm2LcwZ-ps) to access to a short video demonstration of the tool. 
 
 ## Models
 
