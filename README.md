@@ -77,6 +77,8 @@ The trained models have been used for virtual multiplexing in a real dataset whi
 
 The datasets, models and output generated are not incluided in this repository since they too large for GitHub, to access them they are added as links to Google Drive. 
 
+## Acknowledgements
+Work produced with the support of a 2023 Leonardo Grant for Scientific Research and Cultural Creation, BBVA Foundation
 
 
 
