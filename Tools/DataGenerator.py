@@ -1,10 +1,10 @@
 """
 Modified on Thu april 18 2023
 
-@author: Ana Ballesteros
+@author: Ana Ballesteros and Jose Carlos Redondo
 
 Functions: 
-Reads in an .czi file and generates datasets according to the parameter provided
+Reads in an .czi or .lif file and generates datasets according to the parameter provided
 
 """
 
@@ -21,7 +21,10 @@ from PIL import Image, ImageEnhance
 from skimage import io
 from skimage import color
 from skimage import exposure
-
+from readlif.reader import LifFile
+import tifffile
+from natsort import natsorted
+import shutil
 
 
 #Function increases/decreases randomly the brightness of the passed imaged based on a distribution of values passed as a list
@@ -40,16 +43,23 @@ def BrightnessAugmentation(image,brightnesslist):
 
 #FOR TRAINING AND TESTING A MODEL
 #Function extracts patch, normalizes it based on percentile value of each channel, and creates syntheic data, returning concatenated AB images representing the source and target image.
-def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,normalization,Brightness):
+def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,normalization,Brightness,filepath):
     
     #Generate brightness range list for data augmentation
     #Hard coded the range of brightness. a value of 1 the yields no change. Lower than 1, image gets darger. Higher than 1, image gets brighter.
     # Lower bound is 0.5 and upper bound is 3.
     brightnessRange = [0.5,3]
-    #generating a list containing values between 0.5 and 3 with steps of 0.01 representing brightness degrees that will be sampled for introducing brightness. 
-    l = int(brightnessRange[0] * 100)
-    u = int(brightnessRange[1]*100)
-    brightnesslist = [round(x*0.01,2) for x in range(l,u,1)]
+
+    if filepath.endswith('.lif'):
+        l_br = int(brightnessRange[0] * 100)
+        u_br = int(brightnessRange[1] * 100)
+        brightnesslist = [round(x * 0.01, 2) for x in range(l_br, u_br, 1)]
+
+    else:
+        #generating a list containing values between 0.5 and 3 with steps of 0.01 representing brightness degrees that will be sampled for introducing brightness. 
+        l = int(brightnessRange[0] * 100)
+        u = int(brightnessRange[1]*100)
+        brightnesslist = [round(x*0.01,2) for x in range(l,u,1)]
   
     #setting arguments to integers
     uby = int(uby)
@@ -76,24 +86,45 @@ def get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode
     #List containing normalized patch from all three channels
     channel_normalized_patches_list = []
 
-    #For each channel, get the patch using the indices in the yax and xax lists
-    for c in range(channels):
-        #extracting the patch from channel "c" from the layer "rl" of the stack 
-        patch = channel_stacks[c][rl, yax[0]:yax[1],xax[0]:xax[1]]
+    if filepath.endswith('.lif'):
         
-        if normalization == "ac":
-            # Normalizing the patch using the percentile of the current channel "c"
-            normalized_patch = (patch/percentiles[c])*255         
-
-        if normalization == "od":
-            # Normalizing the patch using the highest percentile (open detector channel percentile)
-            normalized_patch = (patch/percentiles[2])*255     
-
-        # Clipping the values, anything higher than 255 is set to 255
-        normalized_patch[normalized_patch> 255] = 255
-        #Adding the normalized patch of current channel "c" to the list which collects all 3 channels. 
-        channel_normalized_patches_list.append(normalized_patch)
+        for c in range(len(channels)):
+        # Extracting the patch from channel "c" from the layer "rl" of the stack
+            patch = channel_stacks[c][rl, yax[0]:yax[1], xax[0]:xax[1]]
     
+            if normalization == "ac":
+                # Normalizing the patch using the percentile of the current channel "c"
+                normalized_patch = (patch / percentiles[c]) * 255
+    
+            if normalization == "od":
+                # Normalizing the patch using the highest percentile (open detector channel percentile)
+                normalized_patch = (patch / percentiles[2]) * 255
+    
+            # Clipping the values, anything higher than 255 is set to 255
+            normalized_patch[normalized_patch > 255] = 255
+            # Adding the normalized patch of current channel "c" to the list which collects all 3 channels
+            channel_normalized_patches_list.append(normalized_patch)
+        
+    else:
+    
+        #For each channel, get the patch using the indices in the yax and xax lists
+        for c in range(channels):
+            #extracting the patch from channel "c" from the layer "rl" of the stack 
+            patch = channel_stacks[c][rl, yax[0]:yax[1],xax[0]:xax[1]]
+            
+            if normalization == "ac":
+                # Normalizing the patch using the percentile of the current channel "c"
+                normalized_patch = (patch/percentiles[c])*255         
+    
+            if normalization == "od":
+                # Normalizing the patch using the highest percentile (open detector channel percentile)
+                normalized_patch = (patch/percentiles[2])*255     
+    
+            # Clipping the values, anything higher than 255 is set to 255
+            normalized_patch[normalized_patch> 255] = 255
+            #Adding the normalized patch of current channel "c" to the list which collects all 3 channels. 
+            channel_normalized_patches_list.append(normalized_patch)
+        
     
     #Empty 3 channel RGB array for source image
     source_image = np.zeros((patchsize, patchsize,3))
@@ -220,6 +251,136 @@ def get_patch_predict(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mo
     #Return the AB image
     return(image_AB)
 
+
+# ----------------------------------------------------------------------------------
+# ------------------------------ .LIF FILE MANAGEMENT ------------------------------
+# ----------------------------------------------------------------------------------
+
+# Dir creation (if doesnt exist)
+def create_directories(base_dir):
+    os.makedirs(base_dir, exist_ok=True)
+    for subdir in ["train", "test", "val"]:
+        os.makedirs(os.path.join(base_dir, subdir), exist_ok=True)
+
+# Percentiles per channel
+def calculate_percentiles(filepaths, l_layer, u_layer, percentile):
+    channel_stacks = []
+    percentiles = []
+    
+    for filepath in filepaths:
+        tmp_channel_stacked_planes = []
+        for layer in range(l_layer, u_layer):
+            data = tifffile.imread(filepath)[layer, :, :]
+            tmp_channel_stacked_planes.append(data)
+        
+        planes_stacked = np.stack(tmp_channel_stacked_planes, axis=0)
+        channel_stacks.append(planes_stacked)
+        flat_stacked_planes = planes_stacked.flatten()
+        p_val = np.percentile(flat_stacked_planes, percentile)
+        percentiles.append(p_val)
+    
+    return channel_stacks, percentiles
+
+# Extract and save train, test and validation patches
+def extract_and_save_patches(datafoldername, t_train, t_test, t_val, patchsize, channels, channel_stacks, percentiles, mode, alpha, Norm, Brightness, filepath):
+    dimensions = channel_stacks[0].shape
+    l = dimensions[0]
+    y = dimensions[1]
+    x = dimensions[2]
+    ubx = x - patchsize
+    uby = y - patchsize
+
+    for phase, count in zip(['train', 'test', 'val'], [t_train, t_test, t_val]):
+        for t in range(count):
+            image_AB = get_patch_train(l, uby, ubx, patchsize, channels, channel_stacks, percentiles, mode, alpha, Norm, Brightness, filepath)
+            filename = f"{datafoldername}/{phase}/{t}.png"
+            matplotlib.image.imsave(filename, image_AB.astype(np.uint8))
+
+# Ext
+def process_channel_to_tiff(series, channel_idx, num_frames, ruta_base, sample_name):
+    """
+    Process a channel from a series and saves the images in a multipage TIFF file.
+
+    Args:
+        series (LifSeries): Series to process.
+        channel_idx (int): Index of the channel to process.
+        num_frames (int): Number of frames to process.
+        ruta_base (str): Base path to save the files.
+        sample_name (str): Name of the channel.
+
+    Returns:
+        str: Path to the created multipage TIFF file.
+    """
+    ruta_carpeta = os.path.join(ruta_base, sample_name)
+
+    if not os.path.exists(ruta_carpeta):
+        os.makedirs(ruta_carpeta)
+
+    # Guardar cada capa como un archivo TIFF separado
+    for i in range(num_frames):
+        chosen = series.get_frame(c=channel_idx, z=i)
+        tifffile.imwrite(f'{ruta_carpeta}/{sample_name}_{i}.tiff', chosen)
+
+    # Obtener una lista de todos los archivos TIFF en la carpeta
+    tiff_files = [f for f in os.listdir(ruta_carpeta) if f.endswith('.tiff') or f.endswith('.tif')]
+
+    # Ordenar la lista de archivos si es necesario
+    tiff_files = natsorted(tiff_files)
+
+    # Leer y almacenar todos los frames de los archivos TIFF
+    frames = []
+    for tiff_file in tiff_files:
+        with tifffile.TiffFile(os.path.join(ruta_carpeta, tiff_file)) as tif:
+            for page in tif.pages:
+                frames.append(page.asarray())
+
+    # Guardar todos los frames en un solo archivo TIFF multipágina
+    tifffile.imwrite(f'{ruta_carpeta}/{sample_name}.tiff', frames)
+
+    # Devuelve la ruta al archivo TIFF multipágina creado
+    return os.path.join(ruta_carpeta, f'{sample_name}.tiff')
+
+def choose_and_process_lif_channel(lif_path, series_idx, channel_idx, num_frames, ruta_base, sample_name):
+    """
+    Chooses a series and a channel from the LIF file and converts them into a multipage TIFF file.
+
+    Args:
+        lif_path (str): Path to the LIF file.
+        series_idx (int): Index of the series to process.
+        channel_idx (int): Index of the channel to process.
+        num_frames (int): Number of frames to process.
+        ruta_base (str): Base path to save the files.
+        sample_name (str): Name of the channel.
+
+    Returns:
+        str: Path to the created multipage TIFF file.
+    """
+    reader = LifFile(lif_path)
+    series = reader.get_image(series_idx)
+    return process_channel_to_tiff(series, channel_idx, num_frames, ruta_base, sample_name)
+
+def process_multiple_channels(lif_path, series_list, channel_list, num_frames, ruta_base):
+    """
+    Processes multiple series and channels and saves the images into multipage TIFF files.
+
+    Args:
+        lif_path (str): Path to the LIF file.
+        series_list (list): List of series indices to process.
+        channel_list (list): List of channel indices to process.
+        num_frames (int): Number of frames to process.
+        ruta_base (str): Base path to save the files.
+
+    Returns:
+        list: List of paths to the created multipage TIFF files.
+    """
+    tiff_paths = []
+    for series_idx, channel_idx in zip(series_list, channel_list):
+        sample_name = f'channel_{series_idx + 1}_{channel_idx + 1}'
+        ruta_tiff = choose_and_process_lif_channel(lif_path, series_idx, channel_idx, num_frames, ruta_base, sample_name)
+        tiff_paths.append(ruta_tiff)
+    
+    return tiff_paths
+
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #MAIN function automating the patch extraction process
@@ -242,100 +403,135 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
     channel_stacks = []
     #List containing the calculated percentile value from each channel from the stack 
     percentiles = []
-    
-    #IF WE WANT DATAGENERATOR FOR TRAINING AND TESTING A PIX2PIX MODEL
+
 
     if role == "train_test":
-
-        #LOADING THE CHANNEL DATA FROM THE 3D STACK AND CALCULATING PERCENTILE FOR EACH CHANNEL
-        selected_channels = [ch1,ch2,ch3]
-        #For each channel in the 3Dstack
-        for i in selected_channels:
-            #Temporary list holding the collected stacked planes from channel "i" each iteration
-            tmp_channel_stacked_planes = []
-            #For each layer in the range of lower and uper layer limits
-            for j in range(l_layer,u_layer):
-                #Extracting layer (or plane) using the reading function from stapl3D. The plane consist of 49 tiles. 
-                data = shading.read_tiled_plane(filepath,i,j)
-                #Stacking the 49 tiles on top of each other. 
-                dstacked = np.stack(data, axis=0)
-                #Add stacked tiles from the single plane to temp list collecting each plane
-                tmp_channel_stacked_planes.append(dstacked)
-
-            #Stacking all collected planes from a single channel as the following dimensions l,y,x   
-            planes_stacked = np.vstack(tmp_channel_stacked_planes)
-            #Append stacked planes of a single channel to list which collects all channel planes. 
-            channel_stacks.append(planes_stacked)
-            #Making a 1D vector for percentile calculation
-            flat_stacked_planes = planes_stacked.flatten()
-            #Calculating percentile value for the channel "i"
-            p_val = np.percentile(planes_stacked, percentile)
-
-            #Append percentile values to list
-            percentiles.append(p_val)
         
-        #AUTOMATING PATCH EXTRACTION
-        #Get dimensions that will be used to extract patches
-        dimensions = channel_stacks[0].shape 
+        if filepath.endswith('.lif'):
 
+            series_list = [0, 0, 1]  # Lista de índices de las series a procesar
+            channel_list = [0, 1, 0]  # Lista de índices de los canales a procesar
 
-        #Getting dimension of 3D stack l=layers, y and x tile size
-        l = dimensions[0]
-        y = dimensions[1]
-        x = dimensions[2]
+            num_frames = u_layer - l_layer
+            ruta_base = '../channels'
+            
+            # Procesar las series y canales especificados
+            filepaths = process_multiple_channels(filepath, series_list, channel_list, num_frames, ruta_base)
+            
+            l_layer, u_layer = 10, 20  # Define tus límites de capas
+            
+            channel_stacks, percentiles = calculate_percentiles(filepaths, l_layer, u_layer, percentile)
 
-        #Upperbound for x and y (avoid taking patch beyond frame size)
-        ubx = x-patchsize
-        uby = y-patchsize
-
-        #Defining proportions of the dataset
-        t_train = int(datasize)
-        t_test  = int(t_train*0.2)
-        t_val   = int(t_train*0.2)
-
+            t_train = int(datasize)
+            t_test = int(t_train * 0.2)
+            t_val = int(t_train * 0.2)
+            
+            if alpha:
+                wb = str(alpha)+"_"+str(round(1-alpha,2))
+                datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_"+wb+"_patches"
     
-        #----------****CREATING FOLDERS****----------
-        if alpha:
-            wb = str(alpha)+"_"+str(round(1-alpha,2))
-            datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_"+wb+"_patches"
+            elif Brightness:
+                datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_br"+Brightness+"%"+"_patches"
+            else:
+                datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_patches"
+            
+            create_directories(datafoldername)
+            
+            extract_and_save_patches(datafoldername, t_train, t_test, t_val, patchsize, filepaths, channel_stacks, percentiles, mode, alpha, Norm, Brightness, filepath)
+            shutil.rmtree(ruta_base)
 
-        elif Brightness:
-            datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_br"+Brightness+"%"+"_patches"
+            
         else:
-            datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_patches"
-
-
-        os.mkdir(datafoldername)
-        if os.path.exists(datafoldername+"/train")==False:
-            os.mkdir(datafoldername+"/train")
-        if os.path.exists(datafoldername+"/test")==False:
-            os.mkdir(datafoldername+"/test")
-        if os.path.exists(datafoldername+"/val")==False:
-            os.mkdir(datafoldername+"/val")    
-
-
-        #----------********----------
-        #Extracting patches for training testing and validation
-
-        #Generating training set
-        for t in range(t_train):    
-
-            #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-            image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
-            #Saving the AB patch
-            matplotlib.image.imsave(datafoldername+"/train/"+str(t)+'.png', image_AB.astype(np.uint8))
-
-        for t in range(t_test):  
-            #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-            image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
-            #Saving the AB patch
-            matplotlib.image.imsave(datafoldername+"/test/"+str(t)+'.png', image_AB.astype(np.uint8))
-
-        for t in range(t_val):  
-            #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-            image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
-            #Saving the AB patch
-            matplotlib.image.imsave(datafoldername+"/val/"+str(t)+'.png', image_AB.astype(np.uint8))
+            
+            #LOADING THE CHANNEL DATA FROM THE 3D STACK AND CALCULATING PERCENTILE FOR EACH CHANNEL
+            selected_channels = [ch1,ch2,ch3]
+            #For each channel in the 3Dstack
+            for i in selected_channels:
+                #Temporary list holding the collected stacked planes from channel "i" each iteration
+                tmp_channel_stacked_planes = []
+                #For each layer in the range of lower and uper layer limits
+                for j in range(l_layer,u_layer):
+                    #Extracting layer (or plane) using the reading function from stapl3D. The plane consist of 49 tiles. 
+                    data = shading.read_tiled_plane(filepath,i,j)
+                    #Stacking the 49 tiles on top of each other. 
+                    dstacked = np.stack(data, axis=0)
+                    #Add stacked tiles from the single plane to temp list collecting each plane
+                    tmp_channel_stacked_planes.append(dstacked)
+    
+                #Stacking all collected planes from a single channel as the following dimensions l,y,x   
+                planes_stacked = np.vstack(tmp_channel_stacked_planes)
+                #Append stacked planes of a single channel to list which collects all channel planes. 
+                channel_stacks.append(planes_stacked)
+                #Making a 1D vector for percentile calculation
+                flat_stacked_planes = planes_stacked.flatten()
+                #Calculating percentile value for the channel "i"
+                p_val = np.percentile(planes_stacked, percentile)
+    
+                #Append percentile values to list
+                percentiles.append(p_val)
+            
+            #AUTOMATING PATCH EXTRACTION
+            #Get dimensions that will be used to extract patches
+            dimensions = channel_stacks[0].shape 
+    
+    
+            #Getting dimension of 3D stack l=layers, y and x tile size
+            l = dimensions[0]
+            y = dimensions[1]
+            x = dimensions[2]
+    
+            #Upperbound for x and y (avoid taking patch beyond frame size)
+            ubx = x-patchsize
+            uby = y-patchsize
+    
+            #Defining proportions of the dataset
+            t_train = int(datasize)
+            t_test  = int(t_train*0.2)
+            t_val   = int(t_train*0.2)
+    
+        
+            #----------****CREATING FOLDERS****----------
+            if alpha:
+                wb = str(alpha)+"_"+str(round(1-alpha,2))
+                datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_"+wb+"_patches"
+    
+            elif Brightness:
+                datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_br"+Brightness+"%"+"_patches"
+            else:
+                datafoldername = biosample+"_"+str(datasize)+"_"+Norm+"_"+mode+"_patches"
+    
+    
+            os.mkdir(datafoldername)
+            if os.path.exists(datafoldername+"/train")==False:
+                os.mkdir(datafoldername+"/train")
+            if os.path.exists(datafoldername+"/test")==False:
+                os.mkdir(datafoldername+"/test")
+            if os.path.exists(datafoldername+"/val")==False:
+                os.mkdir(datafoldername+"/val")    
+    
+    
+            #----------********----------
+            #Extracting patches for training testing and validation
+    
+            #Generating training set
+            for t in range(t_train):    
+    
+                #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
+                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+                #Saving the AB patch
+                matplotlib.image.imsave(datafoldername+"/train/"+str(t)+'.png', image_AB.astype(np.uint8))
+    
+            for t in range(t_test):  
+                #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
+                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+                #Saving the AB patch
+                matplotlib.image.imsave(datafoldername+"/test/"+str(t)+'.png', image_AB.astype(np.uint8))
+    
+            for t in range(t_val):  
+                #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
+                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+                #Saving the AB patch
+                matplotlib.image.imsave(datafoldername+"/val/"+str(t)+'.png', image_AB.astype(np.uint8))
     
     elif role == "predict": 
         #LOADING THE CHANNEL DATA FROM THE 3D STACK AND CALCULATING PERCENTILE FOR EACH CHANNEL
@@ -346,10 +542,46 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
             tmp_channel_stacked_planes = []
             #For each layer in the range of lower and uper layer limits
             for j in range(l_layer,u_layer):
+                
                 #Extracting layer (or plane) using the reading function from stapl3D. The plane consist of 49 tiles. 
-                data = shading.read_tiled_plane(filepath,i,j)
+                #data = shading.read_tiled_plane(filepath,i,j)
+                
+                dstack = []
+                
+                # Si el archivo es .lif...
+                if filepath.endswith('.lif'):
+
+                    # Definimos una lista que guarda los datos
+                    m_idx = 3
+
+                    # Leemos el archivo .lif
+                    lif = LifFile(filepath)
+
+                    # Tomamos la primera imagen del archivo .lif 
+                    lim = lif.get_image(1)
+                    #frame = lim.get_frame(z=j, c=i, t=0, m=m_idx)
+
+                    # Obtenemos la cantidad de tiles en la dimensión m (m_idx)
+                    n_tiles = lim.dims[m_idx]
+
+                    # Iteramos tile por tile
+                    for m in range(n_tiles):
+
+                        # Obtenemos el frame para nuestros canales i, plano j (l y u_layer), tiempo 0 y tile m
+                        data = lim.get_frame(z=j, c=i, t=0, m=m)
+
+                        # Agregamos el frame a la lista dstack
+                        dstack.append(data)
+                
+                # Si no es .lif ejecuta read_tiled_plane tal cual desde STAPL-3D
+                else:
+                    dstack = shading.read_tiled_plane(filepath,i,j)
+
+
+
+
                 #Stacking the 49 tiles on top of each other. 
-                dstacked = np.stack(data, axis=0)
+                dstacked = np.stack(dstack, axis=0)
                 #Add stacked tiles from the single plane to temp list collecting each plane
                 tmp_channel_stacked_planes.append(dstacked)
 
@@ -364,7 +596,7 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
 
             #Append percentile values to list
             percentiles.append(p_val)
-            
+
         #AUTOMATING PATCH EXTRACTION
         #Get dimensions that will be used to extract patches
         dimensions = channel_stacks[0].shape 
