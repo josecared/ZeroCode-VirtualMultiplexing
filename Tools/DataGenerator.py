@@ -517,19 +517,19 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
             for t in range(t_train):    
     
                 #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness,filepath)
                 #Saving the AB patch
                 matplotlib.image.imsave(datafoldername+"/train/"+str(t)+'.png', image_AB.astype(np.uint8))
     
             for t in range(t_test):  
                 #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness,filepath)
                 #Saving the AB patch
                 matplotlib.image.imsave(datafoldername+"/test/"+str(t)+'.png', image_AB.astype(np.uint8))
     
             for t in range(t_val):  
                 #Random patch is extracted and a synthetic source image and a ground truth target image is returned concatenated in AB png format
-                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness)
+                image_AB = get_patch_train(l,uby,ubx,patchsize,channels,channel_stacks,percentiles,mode,alpha,Norm,Brightness,filepath)
                 #Saving the AB patch
                 matplotlib.image.imsave(datafoldername+"/val/"+str(t)+'.png', image_AB.astype(np.uint8))
     
