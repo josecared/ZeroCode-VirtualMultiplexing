@@ -410,7 +410,7 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
         if filepath.endswith('.lif'):
 
             series_list = [0, 0, 1]  # Lista de índices de las series a procesar
-            channel_list = [0, 1, 0]  # Lista de índices de los canales a procesar
+            channel_list = [1, 0, 0]  # Lista de índices de los canales a procesar
 
             num_frames = u_layer - l_layer
             ruta_base = '../channels'
