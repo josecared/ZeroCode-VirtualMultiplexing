@@ -9,6 +9,9 @@ Reads in an .czi or .lif file and generates datasets according to the parameter 
 """
 
 import numpy as np
+import sys
+sys.path.append('/app/STAPL3D')
+
 from stapl3d.preprocessing import shading
 import matplotlib.pyplot as plt
 import argparse
@@ -25,6 +28,8 @@ from readlif.reader import LifFile
 import tifffile
 from natsort import natsorted
 import shutil
+from tifffile import TiffFile
+
 
 
 #Function increases/decreases randomly the brightness of the passed imaged based on a distribution of values passed as a list
@@ -381,6 +386,14 @@ def process_multiple_channels(lif_path, series_list, channel_list, num_frames, r
     
     return tiff_paths
 
+
+def read_tiff_plane(filepath, channel, plane):
+    with TiffFile(filepath) as tif:
+        # Asumimos que la imagen TIFF es un stack 3D con un canal específico
+        image = tif.pages[plane].asarray()
+        return image
+
+
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #MAIN function automating the patch extraction process
@@ -571,6 +584,12 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
                         data = lim.get_frame(z=j, c=i, t=0, m=m)
 
                         # Agregamos el frame a la lista dstack
+                        dstack.append(data)
+                
+                elif filepath.endswith('.tiff'):
+                    # Lee el archivo TIFF
+                    for m in range(l_layer, u_layer):
+                        data = read_tiff_plane(filepath, i, m)
                         dstack.append(data)
                 
                 # Si no es .lif ejecuta read_tiled_plane tal cual desde STAPL-3D
