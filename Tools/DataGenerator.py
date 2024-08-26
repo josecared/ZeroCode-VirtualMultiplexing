@@ -578,7 +578,7 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
                         # Agregamos el frame a la lista dstack
                         dstack.append(data)
                 
-                elif filepath.endswith('.tiff'):
+                elif filepath.endswith('.tiff') or filepath.endswith('.tif'):
                     with TiffFile(filepath) as tif:
                         print(f'Iteracion {j} de {u_layer}')
                         data = tif.pages[j].asarray()
