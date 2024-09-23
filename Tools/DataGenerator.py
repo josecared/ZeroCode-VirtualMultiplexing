@@ -553,29 +553,29 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
                 
                 dstack = []
                 
-                # Si el archivo es .lif...
+                # If the file is .lif...
                 if filepath.endswith('.lif'):
-
-                    # Definimos una lista que guarda los datos
+                
+                    # Define a list to store the data
                     m_idx = 3
-
-                    # Leemos el archivo .lif
+                
+                    # Read the .lif file
                     lif = LifFile(filepath)
-
-                    # Tomamos la primera imagen del archivo .lif 
+                
+                    # Take the first image from the .lif file
                     lim = lif.get_image(1)
-                    #frame = lim.get_frame(z=j, c=i, t=0, m=m_idx)
-
-                    # Obtenemos la cantidad de tiles en la dimensión m (m_idx)
+                    # frame = lim.get_frame(z=j, c=i, t=0, m=m_idx)
+                
+                    # Get the number of tiles in the m dimension (m_idx)
                     n_tiles = lim.dims[m_idx]
-
-                    # Iteramos tile por tile
+                
+                    # Iterate through each tile
                     for m in range(n_tiles):
-
-                        # Obtenemos el frame para nuestros canales i, plano j (l y u_layer), tiempo 0 y tile m
+                
+                        # Get the frame for our channels i, plane j (l and u_layer), time 0, and tile m
                         data = lim.get_frame(z=j, c=i, t=0, m=m)
-
-                        # Agregamos el frame a la lista dstack
+                
+                        # Append the frame to the dstack list
                         dstack.append(data)
                 
                 elif filepath.endswith('.tiff') or filepath.endswith('.tif'):
@@ -583,12 +583,9 @@ def main_DataGenerator(filepath, role, percentile,patchsize,channels,ch1,ch2,ch3
                         data = tif.pages[j].asarray()
                         dstack.append(data)
                 
-                # Si no es .lif ejecuta read_tiled_plane tal cual desde STAPL-3D
+                # If it's not a .lif file, execute read_tiled_plane as is from STAPL-3D
                 else:
-                    dstack = shading.read_tiled_plane(filepath,i,j)
-
-
-
+                    dstack = shading.read_tiled_plane(filepath, i, j)
 
                 #Stacking the 49 tiles on top of each other. 
                 dstacked = np.stack(dstack, axis=0)
